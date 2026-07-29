@@ -1714,8 +1714,54 @@ window.electronAPI.onSaveProjectAs(async () => {
 
 // Xử lý sự kiện nhấn nút Nạp Code
 const uploadBtn = document.getElementById('upload-btn');
+const comPortSelect = document.getElementById('com-port-select');
+let isUploadInProgress = false;
+
+function getUploadErrorSummary(message) {
+  const text = String(message || 'Không thể nạp code.');
+  const compileErrors = text
+    .split(/\r?\n/)
+    .filter(line => /(?:^|:)\s*(?:fatal\s+)?error:/i.test(line))
+    .slice(0, 3)
+    .map(line => line.trim());
+  return compileErrors.length > 0 ? compileErrors.join('\n') : text.slice(0, 1200);
+}
+
+function validateWorkspaceForUpload() {
+  const topBlocks = workspace.getTopBlocks(false);
+  const startBlocks = topBlocks.filter(block => block.type === 'esp32_start');
+  if (startBlocks.length === 0) {
+    throw new Error("Bạn cần sử dụng khối 'Khởi động Robot' làm khối chính!");
+  }
+  if (startBlocks.length > 1) {
+    throw new Error("Chỉ được dùng một khối 'Khởi động Robot' trong mỗi dự án.");
+  }
+
+  const allowedTopLevelTypes = new Set([
+    'esp32_start',
+    'retocar_event_button',
+    'procedures_defnoreturn',
+    'procedures_defreturn'
+  ]);
+  const disconnectedBlocks = topBlocks.filter(block => !allowedTopLevelTypes.has(block.type));
+  if (disconnectedBlocks.length > 0) {
+    disconnectedBlocks[0].select();
+    workspace.centerOnBlock(disconnectedBlocks[0].id);
+    throw new Error(
+      `Có ${disconnectedBlocks.length} khối lệnh đang nằm ngoài khối 'Khởi động Robot'. ` +
+      'Khối đầu tiên đã được chọn; hãy kéo khối đó vào chương trình rồi nạp lại.'
+    );
+  }
+}
 
 window.electronAPI.onUploadProgress((progress) => {
+  if (!isUploadInProgress) return;
+  if (progress.status === 'error') {
+    uploadBtn.innerText = '❌ Nạp không thành công';
+    uploadBtn.style.backgroundColor = '#dc3545';
+    uploadBtn.setAttribute('aria-label', progress.message || 'Nạp code không thành công');
+    return;
+  }
   const percent = Math.max(0, Math.min(100, Number(progress.percent) || 0));
   uploadBtn.innerText = `Đang nạp code: ${percent}%`;
   uploadBtn.setAttribute('aria-label', progress.message || `Đang nạp code: ${percent}%`);
@@ -1727,30 +1773,24 @@ uploadBtn.addEventListener('click', async () => {
     return;
   }
 
+  if (isUploadInProgress) return;
+  isUploadInProgress = true;
   uploadBtn.disabled = true;
+  comPortSelect.disabled = true;
   uploadBtn.innerText = "Đang nạp code: 0%";
 
   try {
+    validateWorkspaceForUpload();
+
     // Sinh code từ tất cả các khối trên màn hình
     let finalCppCode = Blockly.JavaScript.workspaceToCode(workspace);
 
     // Ép kiểu biến JavaScript (var) thành kiểu (float) của C++
     finalCppCode = finalCppCode.replace(/^var /gm, 'float ');
 
-    // Nếu người dùng không dùng khối Start, nhắc nhở
-    if (!finalCppCode.includes('void setup()')) {
-      alert("Bạn cần sử dụng khối 'Khởi động Robot' làm khối chính!");
-      uploadBtn.disabled = false;
-      uploadBtn.innerText = "Nạp Code";
-      return;
-    }
-
-    const selectedPort = document.getElementById('com-port-select').value;
+    const selectedPort = comPortSelect.value;
     if (!selectedPort) {
-      alert("Vui lòng đợi tải xong cổng COM hoặc cắm mạch vào!");
-      uploadBtn.disabled = false;
-      uploadBtn.innerText = "Nạp Code";
-      return;
+      throw new Error("Vui lòng đợi tải xong cổng COM hoặc cắm mạch vào!");
     }
 
     // Gửi đoạn code C++ này sang file main.js
@@ -1766,22 +1806,31 @@ uploadBtn.addEventListener('click', async () => {
       uploadBtn.style.backgroundColor = ""; // Reset
     }, 3000);
   } catch (error) {
-    uploadBtn.innerText = "❌ Lỗi Nạp Code!";
+    uploadBtn.innerText = "❌ Nạp không thành công";
     uploadBtn.style.backgroundColor = "#dc3545"; // Màu đỏ
+    const errorSummary = getUploadErrorSummary(error.message);
+    setTimeout(() => alert("Nạp code không thành công!\n\n" + errorSummary), 50);
     setTimeout(() => {
-      uploadBtn.disabled = false;
-      uploadBtn.innerText = "Nạp Code";
       uploadBtn.style.backgroundColor = "";
-      setTimeout(() => alert("Lỗi khi nạp code: " + error.message), 100);
-    }, 2000);
+    }, 4000);
+  } finally {
+    isUploadInProgress = false;
+    uploadBtn.disabled = false;
+    comPortSelect.disabled = false;
+    setTimeout(() => {
+      if (!isUploadInProgress) uploadBtn.innerText = "Nạp Code";
+    }, 4000);
   }
 });
 
 let lastPorts = [];
+let serialPortsRequestInFlight = false;
 
 // Lấy danh sách cổng COM (hỗ trợ tự động cập nhật ngầm - quiet)
 async function loadSerialPorts(quiet = false) {
-  const select = document.getElementById('com-port-select');
+  if (isUploadInProgress || serialPortsRequestInFlight) return;
+  serialPortsRequestInFlight = true;
+  const select = comPortSelect;
   const currentSelected = select.value;
 
   if (!quiet) {
@@ -1829,6 +1878,8 @@ async function loadSerialPorts(quiet = false) {
     if (!quiet) {
       select.innerHTML = '<option value="">Lỗi tải cổng COM (Thử cắm lại cáp)</option>';
     }
+  } finally {
+    serialPortsRequestInFlight = false;
   }
 }
 
@@ -1838,13 +1889,13 @@ if (window.electronAPI.isWeb && !window.electronAPI.supportsCodeUpload) {
   // Gọi hàm lấy cổng COM ngay lập tức (hiển thị Đang tìm)
   loadSerialPorts(false);
 
-  // Tự động cập nhật ngầm danh sách cổng COM mỗi 3 giây không cần F5
+  // Quét cổng vừa đủ thường xuyên và tạm dừng hoàn toàn trong lúc biên dịch/nạp.
   setInterval(() => {
     // Chỉ cập nhật khi người dùng đang mở tab ứng dụng hoạt động
-    if (document.hasFocus()) {
+    if (document.hasFocus() && !isUploadInProgress) {
       loadSerialPorts(true);
     }
-  }, 3000);
+  }, 10000);
 }
 
 // --- LOGIC DIALOG TẠO KHỐI TỰ ĐỊNH NGHĨA (MBLOCK STYLE) ---

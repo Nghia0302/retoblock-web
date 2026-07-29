@@ -10,6 +10,8 @@
   };
 
   let currentFileHandle = null;
+  let uploadInProgress = false;
+  let cachedPorts = [];
 
   const projectPickerOptions = {
     types: [{
@@ -156,16 +158,19 @@
   }
 
   async function listBridgePorts() {
+    if (uploadInProgress) return cachedPorts;
     try {
       const response = await bridgeRequest('/ports', { signal: AbortSignal.timeout(4000) });
       const data = await response.json();
-      return Array.isArray(data.ports) ? data.ports : [];
+      cachedPorts = Array.isArray(data.ports) ? data.ports : [];
+      return cachedPorts;
     } catch (_) {
-      return [];
+      return cachedPorts;
     }
   }
 
   async function uploadThroughBridge(code, port) {
+    uploadInProgress = true;
     try {
       const response = await bridgeRequest('/upload', {
         method: 'POST',
@@ -198,18 +203,25 @@
         const message = JSON.parse(buffer);
         if (message.type === 'result') result = message;
       }
-      return result || { success: false, message: 'Không nhận được kết quả từ VS Code.' };
+      const finalResult = result || { success: false, message: 'Không nhận được kết quả từ VS Code.' };
+      if (!finalResult.success) {
+        callbacks.uploadProgress?.({ status: 'error', percent: 0, message: 'Nạp code không thành công' });
+      }
+      return finalResult;
     } catch (error) {
+      callbacks.uploadProgress?.({ status: 'error', percent: 0, message: 'Nạp code không thành công' });
       return {
         success: false,
         message: `Không kết nối được Retoblock Uploader trong VS Code. Hãy mở VS Code, cài PlatformIO và extension Retoblock Uploader.\n\n${error.message}`
       };
+    } finally {
+      uploadInProgress = false;
     }
   }
 
   async function updateBridgeStatus() {
     const status = document.getElementById('bridge-status');
-    if (!status) return;
+    if (!status || uploadInProgress) return;
     try {
       const response = await bridgeRequest('/health', { signal: AbortSignal.timeout(2500) });
       const data = await response.json();
