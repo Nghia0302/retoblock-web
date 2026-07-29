@@ -254,7 +254,6 @@
 
     document.getElementById('new-project-btn').addEventListener('click', () => callbacks.newProject?.());
     document.getElementById('open-project-btn').addEventListener('click', openProjectPicker);
-    document.getElementById('save-project-btn').addEventListener('click', () => callbacks.saveProject?.());
     document.getElementById('save-as-project-btn').addEventListener('click', () => callbacks.saveProjectAs?.());
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then((registrations) => {

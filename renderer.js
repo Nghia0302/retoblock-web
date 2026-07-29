@@ -1543,10 +1543,10 @@ const workspace = Blockly.inject('blocklyDiv', {
   zoom: {
     controls: true,
     wheel: true,
-    startScale: 1,
-    maxScale: 2.5,
-    minScale: 0.35,
-    scaleSpeed: 1.15,
+    startScale: 0.7,
+    maxScale: 1.5,
+    minScale: 0.3,
+    scaleSpeed: 1.08,
     pinch: true
   },
   trashcan: false,
