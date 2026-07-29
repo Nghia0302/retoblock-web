@@ -1540,6 +1540,15 @@ const workspace = Blockly.inject('blocklyDiv', {
   renderer: 'zelos',
   media: './node_modules/blockly/media/',
   scrollbars: true,
+  zoom: {
+    controls: true,
+    wheel: true,
+    startScale: 1,
+    maxScale: 2.5,
+    minScale: 0.35,
+    scaleSpeed: 1.15,
+    pinch: true
+  },
   trashcan: false,
   grid: {
     spacing: 20,
