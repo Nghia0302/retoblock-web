@@ -1722,6 +1722,11 @@ window.electronAPI.onUploadProgress((progress) => {
 });
 
 uploadBtn.addEventListener('click', async () => {
+  if (window.electronAPI.isWeb && !window.electronAPI.supportsCodeUpload) {
+    alert("Nạp Code chưa hoạt động trên web vì cần máy chủ biên dịch chương trình cho ESP32. Phần soạn và lưu/mở dự án vẫn dùng bình thường.");
+    return;
+  }
+
   uploadBtn.disabled = true;
   uploadBtn.innerText = "Đang nạp code: 0%";
 
@@ -1827,16 +1832,20 @@ async function loadSerialPorts(quiet = false) {
   }
 }
 
-// Gọi hàm lấy cổng COM ngay lập tức (hiển thị Đang tìm)
-loadSerialPorts(false);
+if (window.electronAPI.isWeb && !window.electronAPI.supportsCodeUpload) {
+  uploadBtn.title = 'Cần máy chủ biên dịch ESP32 để nạp code trực tiếp trên web';
+} else {
+  // Gọi hàm lấy cổng COM ngay lập tức (hiển thị Đang tìm)
+  loadSerialPorts(false);
 
-// Tự động cập nhật ngầm danh sách cổng COM mỗi 3 giây không cần F5
-setInterval(() => {
-  // Chỉ cập nhật khi người dùng đang mở tab ứng dụng hoạt động
-  if (document.hasFocus()) {
-    loadSerialPorts(true);
-  }
-}, 3000);
+  // Tự động cập nhật ngầm danh sách cổng COM mỗi 3 giây không cần F5
+  setInterval(() => {
+    // Chỉ cập nhật khi người dùng đang mở tab ứng dụng hoạt động
+    if (document.hasFocus()) {
+      loadSerialPorts(true);
+    }
+  }, 3000);
+}
 
 // --- LOGIC DIALOG TẠO KHỐI TỰ ĐỊNH NGHĨA (MBLOCK STYLE) ---
 let previewItems = [];

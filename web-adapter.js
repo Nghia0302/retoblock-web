@@ -9,12 +9,12 @@
   };
 
   let currentFileHandle = null;
-  let installPrompt = null;
 
   const projectPickerOptions = {
     types: [{
       description: 'Dự án RETOBLOCK',
       accept: {
+        'text/html': ['.html'],
         'application/x-retoblock': ['.retoblock'],
         'application/xml': ['.xml']
       }
@@ -22,8 +22,63 @@
     excludeAcceptAllOption: false
   };
 
+  const savePickerOptions = {
+    types: [{
+      description: 'Dự án RETOBLOCK mở trên web',
+      accept: { 'text/html': ['.html'] }
+    }],
+    excludeAcceptAllOption: false
+  };
+
+  function encodeProject(xmlText) {
+    const bytes = new TextEncoder().encode(xmlText);
+    let binary = '';
+    const chunkSize = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+    }
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  }
+
+  function decodeProject(encoded) {
+    const base64 = encoded.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  }
+
+  function buildWebProjectFile(xmlText) {
+    const projectData = encodeProject(xmlText);
+    const appUrl = new URL('./', window.location.href).href;
+    return `<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Dự án RETOBLOCK</title>
+</head>
+<body>
+  <p>Đang mở dự án RETOBLOCK trên web...</p>
+  <script id="retoblock-project-data" type="application/x-retoblock">${projectData}</script>
+  <script>
+    location.replace(${JSON.stringify(appUrl)} + '#project=' + document.getElementById('retoblock-project-data').textContent.trim());
+  </script>
+</body>
+</html>`;
+  }
+
+  function projectXmlFromHtml(htmlText) {
+    const match = htmlText.match(/<script[^>]+id=["']retoblock-project-data["'][^>]*>([\s\S]*?)<\/script>/i);
+    if (!match) throw new Error('File HTML này không chứa dự án RETOBLOCK.');
+    return decodeProject(match[1].trim());
+  }
+
   async function readProjectFile(file, handle = null) {
-    const xmlText = await file.text();
+    const fileText = await file.text();
+    const xmlText = file.name.toLowerCase().endsWith('.html')
+      ? projectXmlFromHtml(fileText)
+      : fileText;
     currentFileHandle = handle;
     if (callbacks.openProject) {
       callbacks.openProject({ xmlText, filePath: file.name });
@@ -45,8 +100,8 @@
     }
   }
 
-  function downloadFallback(xmlText, fileName) {
-    const blob = new Blob([xmlText], { type: 'application/x-retoblock;charset=utf-8' });
+  function downloadFallback(htmlText, fileName) {
+    const blob = new Blob([htmlText], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
@@ -59,21 +114,22 @@
 
   async function writeProjectFile(xmlText, forceNewFile = false) {
     try {
+      const htmlText = buildWebProjectFile(xmlText);
       if ('showSaveFilePicker' in window) {
         if (!currentFileHandle || forceNewFile) {
           currentFileHandle = await window.showSaveFilePicker({
-            ...projectPickerOptions,
-            suggestedName: 'du-an-retoblock.retoblock'
+            ...savePickerOptions,
+            suggestedName: 'du-an-retoblock.html'
           });
         }
         const writable = await currentFileHandle.createWritable();
-        await writable.write(xmlText);
+        await writable.write(htmlText);
         await writable.close();
         return { success: true, filePath: currentFileHandle.name };
       }
 
-      downloadFallback(xmlText, 'du-an-retoblock.retoblock');
-      return { success: true, filePath: 'du-an-retoblock.retoblock' };
+      downloadFallback(htmlText, 'du-an-retoblock.html');
+      return { success: true, filePath: 'du-an-retoblock.html' };
     } catch (error) {
       if (error.name === 'AbortError') return { success: false };
       return { success: false, error: error.message };
@@ -82,9 +138,10 @@
 
   window.electronAPI = {
     isWeb: true,
+    supportsCodeUpload: false,
     sendCodeToESP32: async () => ({
       success: false,
-      message: 'Bản web hiện dùng để soạn và lưu dự án. Hãy dùng bản desktop để nạp code vào robot.'
+      message: 'Bản web chưa có máy chủ biên dịch ESP32 nên chưa thể nạp code trực tiếp.'
     }),
     getSerialPorts: async () => [],
     saveWorkspace: async (xmlText) => {
@@ -105,12 +162,6 @@
     onUploadProgress: (callback) => { callbacks.uploadProgress = callback; }
   };
 
-  window.addEventListener('beforeinstallprompt', (event) => {
-    event.preventDefault();
-    installPrompt = event;
-    document.getElementById('install-app-btn')?.removeAttribute('hidden');
-  });
-
   window.addEventListener('DOMContentLoaded', () => {
     const fileInput = document.getElementById('project-file-input');
     fileInput.addEventListener('change', async () => {
@@ -123,22 +174,26 @@
     document.getElementById('open-project-btn').addEventListener('click', openProjectPicker);
     document.getElementById('save-project-btn').addEventListener('click', () => callbacks.saveProject?.());
     document.getElementById('save-as-project-btn').addEventListener('click', () => callbacks.saveProjectAs?.());
-    document.getElementById('install-app-btn').addEventListener('click', async () => {
-      if (!installPrompt) return;
-      await installPrompt.prompt();
-      installPrompt = null;
-      document.getElementById('install-app-btn').setAttribute('hidden', '');
-    });
-
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js', { scope: './' });
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        registrations.forEach((registration) => registration.unregister());
+      });
+    }
+
+    if ('caches' in window) {
+      caches.keys().then((keys) => Promise.all(
+        keys.filter((key) => key.startsWith('retoblock-web-')).map((key) => caches.delete(key))
+      ));
+    }
+
+    const encodedProject = new URLSearchParams(window.location.hash.slice(1)).get('project');
+    if (encodedProject) {
+      try {
+        callbacks.openProject?.({ xmlText: decodeProject(encodedProject), filePath: 'du-an-retoblock.html' });
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+      } catch (error) {
+        callbacks.projectError?.(`Không thể mở dự án từ file HTML: ${error.message}`);
+      }
     }
   });
-
-  if ('launchQueue' in window) {
-    window.launchQueue.setConsumer(async (launchParams) => {
-      const [handle] = launchParams.files || [];
-      if (handle) await readProjectFile(await handle.getFile(), handle);
-    });
-  }
 })();

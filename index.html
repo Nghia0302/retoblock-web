@@ -6,7 +6,6 @@
   <meta http-equiv="Content-Security-Policy"
     content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'">
   <title>RETOBLOCK</title>
-  <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#212121">
 
   <script>
@@ -67,10 +66,6 @@
       white-space: nowrap;
     }
 
-    #install-app-btn {
-      background: #2e9b62;
-    }
-
     .web-status {
       color: #cfd8dc;
       font-size: 12px;
@@ -125,15 +120,15 @@
       <button id="open-project-btn">Mở dự án</button>
       <button id="save-project-btn">Lưu</button>
       <button id="save-as-project-btn">Lưu thành...</button>
-      <button id="install-app-btn" hidden>Cài ứng dụng</button>
-      <input id="project-file-input" type="file" accept=".retoblock,.xml,application/xml" hidden>
+      <input id="project-file-input" type="file" accept=".html,.retoblock,.xml,text/html,application/xml" hidden>
     </div>
-    <div class="controls" id="device-controls" style="display:none">
-      <label for="com-port-select">Cổng COM:</label>
-      <select id="com-port-select">
+    <div class="controls" id="device-controls">
+      <label for="com-port-select" hidden>Cổng COM:</label>
+      <select id="com-port-select" hidden>
         <option value="">Khởi tạo hệ thống...</option>
       </select>
       <button id="upload-btn">Nạp Code</button>
+      <span class="web-status">Cần bộ biên dịch trực tuyến để nạp vào ESP32</span>
     </div>
   </header>
 
@@ -534,7 +529,7 @@
     </div>
   </div>
 
-  <script src="./web-adapter.js?v=1"></script>
+  <script src="./web-adapter.js?v=2"></script>
   <script src="./renderer.js?v=8"></script>
 </body>
 
