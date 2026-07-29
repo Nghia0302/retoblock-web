@@ -1,12 +1,12 @@
-const CACHE_NAME = 'retoblock-web-v2';
+const CACHE_NAME = 'retoblock-web-v3';
 const APP_SHELL = [
-  './',
-  './index.html',
-  './web-adapter.js',
-  './renderer.js',
-  './banner.png',
-  './logo.png',
-  './manifest.webmanifest'
+  '/',
+  '/editor/index.html',
+  '/editor/web-adapter.js',
+  '/editor/renderer.js',
+  '/editor/banner.png',
+  '/editor/logo.png',
+  '/manifest.webmanifest'
 ];
 
 self.addEventListener('install', (event) => {
