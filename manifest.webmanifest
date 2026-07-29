@@ -1,0 +1,31 @@
+{
+  "name": "RETOBLOCK Web",
+  "short_name": "RETOBLOCK",
+  "description": "Lập trình robot trực quan bằng khối lệnh Blockly.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f6f8",
+  "theme_color": "#212121",
+  "icons": [
+    {
+      "src": "./logo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "./index.html",
+      "accept": {
+        "application/x-retoblock": [".retoblock"],
+        "application/xml": [".xml"]
+      },
+      "launch_type": "single-client"
+    }
+  ],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  }
+}

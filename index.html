@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'">
+  <title>RETOBLOCK</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="theme-color" content="#212121">
+
+  <script>
+    // Bắt và hiển thị mọi lỗi JavaScript ra màn hình để dễ fix
+    window.onerror = function (message, source, lineno, colno, error) {
+      alert("LỖI HỆ THỐNG:\n" + message + "\nDòng: " + lineno);
+      return false;
+    };
+  </script>
+
+  <!-- Tải Blockly từ thư mục node_modules -->
+  <script src="./node_modules/blockly/blockly_compressed.js"></script>
+  <script src="./node_modules/blockly/blocks_compressed.js"></script>
+  <script src="./node_modules/blockly/javascript_compressed.js"></script>
+  <script src="./node_modules/blockly/msg/vi.js"></script>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background-color: #f4f4f4;
+    }
+
+    header {
+      background-color: #333;
+      color: white;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    #blocklyDiv {
+      flex: 1;
+      width: 100%;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .project-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .project-controls button {
+      padding: 8px 12px;
+      white-space: nowrap;
+    }
+
+    #install-app-btn {
+      background: #2e9b62;
+    }
+
+    .web-status {
+      color: #cfd8dc;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 900px) {
+      header {
+        align-items: flex-start;
+        padding: 8px 12px;
+      }
+      header img { height: 32px !important; }
+      .web-status { display: none; }
+      .project-controls button { padding: 7px 9px; font-size: 12px; }
+    }
+
+    button {
+      padding: 8px 16px;
+      background-color: #FD6C35; /* Màu cam điện tử trùng khớp với logo */
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: #e55e2b;
+    }
+
+    button:disabled {
+      background-color: #aaa;
+      cursor: not-allowed;
+    }
+
+    select {
+      padding: 8px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <img src="banner.png" style="height: 40px; border-radius: 6px; object-fit: contain;" alt="RETOBLOCK" />
+      <span class="web-status">Web Editor · tự động lưu trên thiết bị</span>
+    </div>
+    <div class="project-controls">
+      <button id="new-project-btn">Dự án mới</button>
+      <button id="open-project-btn">Mở dự án</button>
+      <button id="save-project-btn">Lưu</button>
+      <button id="save-as-project-btn">Lưu thành...</button>
+      <button id="install-app-btn" hidden>Cài ứng dụng</button>
+      <input id="project-file-input" type="file" accept=".retoblock,.xml,application/xml" hidden>
+    </div>
+    <div class="controls" id="device-controls" style="display:none">
+      <label for="com-port-select">Cổng COM:</label>
+      <select id="com-port-select">
+        <option value="">Khởi tạo hệ thống...</option>
+      </select>
+      <button id="upload-btn">Nạp Code</button>
+    </div>
+  </header>
+
+  <div id="blocklyDiv"></div>
+
+  <xml id="toolbox" style="display: none">
+    <category name="Khởi động" colour="#4C97FF">
+      <block type="esp32_start"></block>
+    </category>
+    <category name="Sự kiện" colour="#FFBF00">
+      <block type="retocar_event_button"></block>
+    </category>
+    <category name="Di Chuyển" colour="#4C97FF">
+      <block type="retocar_move_car"></block>
+      <block type="retocar_move_individual_wheel"></block>
+      <block type="retocar_stop"></block>
+    </category>
+    <category name="Giao tiếp" colour="#8A2BE2">
+      <block type="retocar_led_control"></block>
+      <block type="retocar_set_rgb"></block>
+      <block type="retocar_buzzer_control"></block>
+      <block type="retocar_buzzer_stop"></block>
+    </category>
+    <category name="Cảm biến" colour="#36b5d8">
+      <block type="retocar_sensor_light"></block>
+      <block type="retocar_sensor_ultrasonic"></block>
+      <block type="retocar_sensor_line"></block>
+      <block type="retocar_sensor_button"></block>
+      <block type="retocar_timer_get"></block>
+      <block type="retocar_timer_reset"></block>
+    </category>
+    <category name="Điều khiển" colour="#FFAB19">
+      <block type="retocar_wait"></block>
+      <block type="retocar_wait_until"></block>
+      <block type="retocar_if"></block>
+      <block type="retocar_if_else"></block>
+      <block type="retocar_while"></block>
+      <block type="retocar_repeat_until"></block>
+      <block type="retocar_forever"></block>
+      <block type="retocar_for"></block>
+      <block type="retocar_break"></block>
+      <block type="retocar_continue"></block>
+    </category>
+    <category name="Phép toán" colour="#59C059">
+      <block type="math_arithmetic">
+        <value name="A">
+          <shadow type="math_number">
+            <field name="NUM">1</field>
+          </shadow>
+        </value>
+        <value name="B">
+          <shadow type="math_number">
+            <field name="NUM">1</field>
+          </shadow>
+        </value>
+      </block>
+      <block type="logic_compare">
+        <value name="A">
+          <shadow type="math_number">
+            <field name="NUM">1</field>
+          </shadow>
+        </value>
+        <value name="B">
+          <shadow type="math_number">
+            <field name="NUM">1</field>
+          </shadow>
+        </value>
+      </block>
+      <block type="logic_operation"></block>
+      <block type="logic_negate"></block>
+      <block type="retocar_random_to">
+        <value name="FROM">
+          <shadow type="math_number">
+            <field name="NUM">1</field>
+          </shadow>
+        </value>
+        <value name="TO">
+          <shadow type="math_number">
+            <field name="NUM">100</field>
+          </shadow>
+        </value>
+      </block>
+      <block type="retocar_math_unary">
+        <value name="NUM">
+          <shadow type="math_number">
+            <field name="NUM">9</field>
+          </shadow>
+        </value>
+      </block>
+    </category>
+    <category name="Biến số" colour="#FF8C1A" custom="VARIABLE"></category>
+    <category name="Khối của tôi" colour="#FF6680" custom="PROCEDURE"></category>
+  </xml>
+
+  <!-- Custom Make a Block Modal -->
+  <style>
+    .custom-modal {
+      display: none; 
+      position: fixed; 
+      z-index: 10000; 
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto; 
+      background-color: rgba(0,0,0,0.5);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      align-items: center;
+      justify-content: center;
+    }
+    .custom-modal-content {
+      background-color: #fff;
+      border-radius: 12px;
+      width: 650px;
+      max-width: 90%;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      animation: modalFadeIn 0.25s ease-out;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    @keyframes modalFadeIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .custom-modal-header {
+      padding: 16px 20px;
+      background-color: #f7f7f7;
+      border-bottom: 1px solid #e5e5e5;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .custom-modal-header h2 {
+      margin: 0;
+      font-size: 18px;
+      color: #333;
+      font-weight: 600;
+    }
+    .close-btn {
+      color: #aaa;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+    .close-btn:hover {
+      color: #333;
+    }
+    .custom-modal-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .block-preview-area {
+      background: linear-gradient(135deg, #eef3f7 0%, #e0e9f1 100%);
+      border-radius: 8px;
+      height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #d2dce5;
+      overflow-x: auto;
+      padding: 10px;
+    }
+    /* Scratch style preview block */
+    .scratch-block-preview {
+      background-color: #9966FF;
+      color: white;
+      padding: 10px 18px;
+      border-radius: 20px 4px 4px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 10px rgba(153, 102, 255, 0.3);
+      white-space: nowrap;
+    }
+    .scratch-block-preview span.editable-label {
+      cursor: pointer;
+      border-bottom: 1px dashed rgba(255,255,255,0.7);
+      padding: 2px 4px;
+    }
+    .scratch-block-preview span.editable-label:hover {
+      background-color: rgba(255,255,255,0.2);
+      border-radius: 3px;
+    }
+    .scratch-block-preview span.editable-label input {
+      background: white;
+      border: none;
+      color: #333;
+      font-size: 14px;
+      width: 80px;
+      outline: none;
+      border-radius: 3px;
+      padding: 2px;
+    }
+    /* Input argument shapes in preview */
+    .preview-param-num {
+      background-color: #ff4d6a;
+      border-radius: 12px;
+      padding: 4px 10px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+    .preview-param-text {
+      background-color: #ff4d6a;
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+    .preview-param-bool {
+      background-color: #ff4d6a;
+      clip-path: polygon(10% 0%, 90% 0%, 100% 50%, 90% 100%, 10% 100%, 0% 50%);
+      padding: 4px 14px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+    
+    .card-container {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    .card-btn {
+      border: 1px solid #dcdcdc;
+      border-radius: 8px;
+      padding: 16px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      cursor: pointer;
+      background-color: #fff;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .card-btn:hover {
+      border-color: #9966FF;
+      background-color: #f7f5ff;
+      box-shadow: 0 4px 12px rgba(153,102,255,0.15);
+    }
+    .card-icon {
+      width: 44px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .icon-num::before {
+      content: "";
+      width: 32px;
+      height: 18px;
+      background-color: #ff4d6a;
+      border-radius: 9px;
+      display: block;
+    }
+    .icon-text::before {
+      content: "";
+      width: 32px;
+      height: 18px;
+      background-color: #ff4d6a;
+      border-radius: 3px;
+      display: block;
+    }
+    .icon-bool::before {
+      content: "";
+      width: 34px;
+      height: 18px;
+      background-color: #ff4d6a;
+      clip-path: polygon(15% 0%, 85% 0%, 100% 50%, 85% 100%, 15% 100%, 0% 50%);
+      display: block;
+    }
+    .icon-label::before {
+      content: "text";
+      color: #ff4d6a;
+      font-size: 14px;
+      font-weight: bold;
+      border: 1.5px solid #ff4d6a;
+      border-radius: 3px;
+      padding: 0 4px;
+      display: block;
+    }
+    .card-btn span {
+      font-size: 11px;
+      color: #666;
+      font-weight: 500;
+      line-height: 1.3;
+    }
+    .options-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 4px;
+    }
+    .checkbox-option {
+      font-size: 13px;
+      color: #555;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .custom-modal-footer {
+      padding: 16px 20px;
+      background-color: #f7f7f7;
+      border-top: 1px solid #e5e5e5;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+    .custom-modal-footer button {
+      padding: 8px 24px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-cancel {
+      background-color: #fff;
+      border: 1px solid #dcdcdc;
+      color: #666;
+    }
+    .btn-cancel:hover {
+      background-color: #f5f5f5;
+      color: #333;
+    }
+    .btn-ok {
+      background-color: #9966FF;
+      border: none;
+      color: #fff;
+    }
+    .btn-ok:hover {
+      background-color: #8552eb;
+      box-shadow: 0 4px 10px rgba(133, 82, 235, 0.3);
+    }
+  </style>
+
+  <div id="custom-block-modal" class="custom-modal">
+    <div class="custom-modal-content">
+      <div class="custom-modal-header">
+        <h2 id="modal-title-text">Thực hiện một khối</h2>
+        <span class="close-btn" id="modal-close-btn">&times;</span>
+      </div>
+      <div class="custom-modal-body">
+        <div class="block-preview-area">
+          <div class="scratch-block-preview" id="scratch-block-preview">
+            <!-- Dynamically generated block preview components will go here -->
+          </div>
+        </div>
+        
+        <div class="card-container">
+          <div class="card-btn" id="btn-add-num">
+            <div class="card-icon icon-num"></div>
+            <span>Thêm đầu vào số</span>
+          </div>
+          <div class="card-btn" id="btn-add-text">
+            <div class="card-icon icon-text"></div>
+            <span>Thêm đầu vào chuỗi văn bản</span>
+          </div>
+          <div class="card-btn" id="btn-add-bool">
+            <div class="card-icon icon-bool"></div>
+            <span>Thêm đầu vào đúng/sai</span>
+          </div>
+          <div class="card-btn" id="btn-add-label">
+            <div class="card-icon icon-label"></div>
+            <span>Thêm nhãn</span>
+          </div>
+        </div>
+        
+        <div class="options-row">
+          <div class="checkbox-option">
+            <label style="cursor: pointer; display: flex; align-items: center; gap: 6px;">
+              <input type="checkbox" id="chk-no-refresh" style="cursor: pointer;"> Chạy mà không làm mới màn hình
+            </label>
+          </div>
+          <div class="checkbox-option">
+            <label style="cursor: pointer; display: flex; align-items: center; gap: 6px;">
+              <input type="checkbox" id="chk-has-return" style="cursor: pointer;"> Có giá trị trả về (hoàn trả)
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="custom-modal-footer">
+        <button class="btn-cancel" id="modal-btn-cancel">Hủy bỏ</button>
+        <button class="btn-ok" id="modal-btn-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./web-adapter.js?v=1"></script>
+  <script src="./renderer.js?v=7"></script>
+</body>
+
+</html>
