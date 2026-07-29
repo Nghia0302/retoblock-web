@@ -123,12 +123,12 @@
       <input id="project-file-input" type="file" accept=".html,.retoblock,.xml,text/html,application/xml" hidden>
     </div>
     <div class="controls" id="device-controls">
-      <label for="com-port-select" hidden>Cổng COM:</label>
-      <select id="com-port-select" hidden>
+      <label for="com-port-select">Cổng COM:</label>
+      <select id="com-port-select">
         <option value="">Khởi tạo hệ thống...</option>
       </select>
       <button id="upload-btn">Nạp Code</button>
-      <span class="web-status">Cần bộ biên dịch trực tuyến để nạp vào ESP32</span>
+      <span class="web-status" id="bridge-status">Mở VS Code để kết nối PlatformIO</span>
     </div>
   </header>
 
@@ -529,7 +529,7 @@
     </div>
   </div>
 
-  <script src="./web-adapter.js?v=2"></script>
+  <script src="./web-adapter.js?v=3"></script>
   <script src="./renderer.js?v=8"></script>
 </body>
 

@@ -1,4 +1,5 @@
 (() => {
+  const BRIDGE_URL = 'http://127.0.0.1:32123';
   const callbacks = {
     newProject: null,
     openProject: null,
@@ -136,14 +137,95 @@
     }
   }
 
+  async function bridgeRequest(path, options = {}) {
+    const response = await fetch(`${BRIDGE_URL}${path}`, {
+      cache: 'no-store',
+      ...options
+    });
+    if (!response.ok) {
+      let message = `Retoblock Uploader trả về lỗi ${response.status}.`;
+      try {
+        const data = await response.json();
+        if (data.message) message = data.message;
+      } catch (_) {
+        // Giữ thông báo mặc định nếu phản hồi không phải JSON.
+      }
+      throw new Error(message);
+    }
+    return response;
+  }
+
+  async function listBridgePorts() {
+    try {
+      const response = await bridgeRequest('/ports', { signal: AbortSignal.timeout(4000) });
+      const data = await response.json();
+      return Array.isArray(data.ports) ? data.ports : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  async function uploadThroughBridge(code, port) {
+    try {
+      const response = await bridgeRequest('/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, port })
+      });
+      if (!response.body) throw new Error('Trình duyệt không đọc được tiến độ nạp code.');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let result = null;
+
+      while (true) {
+        const { value, done } = await reader.read();
+        buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const message = JSON.parse(line);
+          if (message.type === 'progress') callbacks.uploadProgress?.(message);
+          if (message.type === 'result') result = message;
+        }
+        if (done) break;
+      }
+
+      if (buffer.trim()) {
+        const message = JSON.parse(buffer);
+        if (message.type === 'result') result = message;
+      }
+      return result || { success: false, message: 'Không nhận được kết quả từ VS Code.' };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Không kết nối được Retoblock Uploader trong VS Code. Hãy mở VS Code, cài PlatformIO và extension Retoblock Uploader.\n\n${error.message}`
+      };
+    }
+  }
+
+  async function updateBridgeStatus() {
+    const status = document.getElementById('bridge-status');
+    if (!status) return;
+    try {
+      const response = await bridgeRequest('/health', { signal: AbortSignal.timeout(2500) });
+      const data = await response.json();
+      status.textContent = data.platformio
+        ? 'VS Code + PlatformIO đã kết nối'
+        : 'Đã kết nối VS Code · chưa thấy PlatformIO';
+    } catch (_) {
+      status.textContent = 'Mở VS Code để kết nối PlatformIO';
+    }
+  }
+
   window.electronAPI = {
     isWeb: true,
-    supportsCodeUpload: false,
-    sendCodeToESP32: async () => ({
-      success: false,
-      message: 'Bản web chưa có máy chủ biên dịch ESP32 nên chưa thể nạp code trực tiếp.'
-    }),
-    getSerialPorts: async () => [],
+    supportsCodeUpload: true,
+    sendCodeToESP32: uploadThroughBridge,
+    getSerialPorts: listBridgePorts,
     saveWorkspace: async (xmlText) => {
       localStorage.setItem('retoblock-workspace', xmlText);
       return { success: true };
@@ -195,5 +277,8 @@
         callbacks.projectError?.(`Không thể mở dự án từ file HTML: ${error.message}`);
       }
     }
+
+    updateBridgeStatus();
+    setInterval(updateBridgeStatus, 5000);
   });
 })();
