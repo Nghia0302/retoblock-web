@@ -246,15 +246,15 @@
 
   window.addEventListener('DOMContentLoaded', () => {
     const fileInput = document.getElementById('project-file-input');
-    fileInput.addEventListener('change', async () => {
+    fileInput?.addEventListener('change', async () => {
       const [file] = fileInput.files;
       if (file) await readProjectFile(file);
       fileInput.value = '';
     });
 
-    document.getElementById('new-project-btn').addEventListener('click', () => callbacks.newProject?.());
-    document.getElementById('open-project-btn').addEventListener('click', openProjectPicker);
-    document.getElementById('save-as-project-btn').addEventListener('click', () => callbacks.saveProjectAs?.());
+    document.getElementById('new-project-btn')?.addEventListener('click', () => callbacks.newProject?.());
+    document.getElementById('open-project-btn')?.addEventListener('click', openProjectPicker);
+    document.getElementById('save-as-project-btn')?.addEventListener('click', () => callbacks.saveProjectAs?.());
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then((registrations) => {
         registrations.forEach((registration) => registration.unregister());
