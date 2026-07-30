@@ -1357,6 +1357,19 @@ Blockly.Blocks['math_change'] = {
   }
 };
 
+// Sinh C++ cho khối tăng/giảm biến. Generator mặc định của Blockly tạo
+// biểu thức JavaScript có `typeof`, khiến PlatformIO không biên dịch được.
+Blockly.JavaScript.forBlock['math_change'] = function (block) {
+  const varName = block.getFieldValue('VAR') || 'item';
+  const delta = Blockly.JavaScript.valueToCode(
+    block,
+    'DELTA',
+    Blockly.JavaScript.ORDER_NONE
+  ) || '0';
+  const operator = block.getFieldValue('MODE') === '-1' ? '-=' : '+=';
+  return `  ${varName} ${operator} ${delta};\n`;
+};
+
 // Ghi đè cấu trúc menu Biến số để thêm khối điền số mặc định (shadow block)
 Blockly.Variables.flyoutCategory = function (workspace) {
   var xmlList = [];
