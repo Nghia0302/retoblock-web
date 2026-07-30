@@ -1269,7 +1269,10 @@ Blockly.JavaScript.forBlock['retocar_random_to'] = function(block) {
 };
 
 Blockly.JavaScript.forBlock['variables_get'] = function (block) {
-  const varName = block.getFieldValue('VAR') || 'x';
+  const variableId = block.getFieldValue('VAR');
+  const varName = variableId
+    ? Blockly.JavaScript.getVariableName(variableId)
+    : 'x';
   return [varName, Blockly.JavaScript.ORDER_ATOMIC];
 };
 
@@ -1360,7 +1363,10 @@ Blockly.Blocks['math_change'] = {
 // Sinh C++ cho khối tăng/giảm biến. Generator mặc định của Blockly tạo
 // biểu thức JavaScript có `typeof`, khiến PlatformIO không biên dịch được.
 Blockly.JavaScript.forBlock['math_change'] = function (block) {
-  const varName = block.getFieldValue('VAR') || 'item';
+  const variableId = block.getFieldValue('VAR');
+  const varName = variableId
+    ? Blockly.JavaScript.getVariableName(variableId)
+    : 'item';
   const delta = Blockly.JavaScript.valueToCode(
     block,
     'DELTA',
