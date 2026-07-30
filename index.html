@@ -54,6 +54,49 @@
       align-items: center;
     }
 
+    .sensor-monitor-toggle {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .sensor-monitor-toggle input {
+      width: 16px;
+      height: 16px;
+      accent-color: #FD6C35;
+    }
+
+    .sensor-monitor-panel {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 9000;
+      width: min(360px, calc(100vw - 36px));
+      padding: 14px;
+      border-radius: 12px;
+      background: rgba(33, 33, 33, 0.96);
+      color: white;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+    }
+
+    .sensor-monitor-panel[hidden] { display: none; }
+    .sensor-monitor-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    .sensor-monitor-status { color: #cfd8dc; font-size: 12px; margin-bottom: 10px; }
+    .sensor-monitor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .sensor-value {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 7px;
+      background: #454545;
+      font-size: 13px;
+    }
+    .sensor-value strong { color: #ffb08d; font-variant-numeric: tabular-nums; }
+
     .project-controls {
       display: flex;
       align-items: center;
@@ -128,10 +171,28 @@
       </select>
       <button id="upload-btn">Nạp Code</button>
       <span class="web-status" id="bridge-status">Mở VS Code để kết nối PlatformIO</span>
+      <label class="sensor-monitor-toggle" title="Hiển thị dữ liệu cảm biến từ robot theo thời gian thực">
+        <input id="sensor-monitor-toggle" type="checkbox">
+        Theo dõi cảm biến
+      </label>
     </div>
   </header>
 
   <div id="blocklyDiv"></div>
+
+  <section id="sensor-monitor-panel" class="sensor-monitor-panel" hidden aria-live="polite">
+    <div class="sensor-monitor-title">Dữ liệu cảm biến thời gian thực</div>
+    <div id="sensor-monitor-status" class="sensor-monitor-status">Đang kết nối với robot...</div>
+    <div class="sensor-monitor-grid">
+      <div class="sensor-value"><span>Ánh sáng</span><strong id="sensor-light">--</strong></div>
+      <div class="sensor-value"><span>Siêu âm</span><strong id="sensor-ultrasonic">-- cm</strong></div>
+      <div class="sensor-value"><span>Dò line S1</span><strong id="sensor-line1">--</strong></div>
+      <div class="sensor-value"><span>Dò line S2</span><strong id="sensor-line2">--</strong></div>
+      <div class="sensor-value"><span>Dò line S3</span><strong id="sensor-line3">--</strong></div>
+      <div class="sensor-value"><span>Nút nhấn 1</span><strong id="sensor-button1">--</strong></div>
+      <div class="sensor-value"><span>Nút nhấn 2</span><strong id="sensor-button2">--</strong></div>
+    </div>
+  </section>
 
   <xml id="toolbox" style="display: none">
     <category name="Khởi động" colour="#4C97FF">
@@ -528,8 +589,8 @@
     </div>
   </div>
 
-  <script src="./web-adapter.js?v=5"></script>
-  <script src="./renderer.js?v=12"></script>
+  <script src="./web-adapter.js?v=6"></script>
+  <script src="./renderer.js?v=13"></script>
 </body>
 
 </html>

@@ -878,6 +878,23 @@ long readUltrasonic() {
   return duration * 0.034 / 2;
 }
 
+void sensorTelemetryTask(void* arg) {
+  while (true) {
+    int lightValue = analogRead(36);
+    long ultrasonicValue = readUltrasonic();
+    int line1 = digitalRead(23);
+    int line2 = digitalRead(16);
+    int line3 = digitalRead(17);
+    int button1 = digitalRead(34);
+    int button2 = digitalRead(35);
+    Serial.printf(
+      "@RETOBLOCK_SENSOR:{\\\"light\\\":%d,\\\"ultrasonic\\\":%ld,\\\"line1\\\":%d,\\\"line2\\\":%d,\\\"line3\\\":%d,\\\"button1\\\":%d,\\\"button2\\\":%d}\\n",
+      lightValue, ultrasonicValue, line1, line2, line3, button1, button2
+    );
+    vTaskDelay(pdMS_TO_TICKS(500));
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   
@@ -903,6 +920,9 @@ void setup() {
   pinMode(4, OUTPUT); digitalWrite(4, HIGH); // Tắt đèn Trái (active-LOW)
   pinMode(2, OUTPUT); digitalWrite(2, HIGH); // Tắt đèn Phải (active-LOW)
   pinMode(15, OUTPUT);
+
+  // Gửi dữ liệu cảm biến cho bảng theo dõi trên Retoblock Web.
+  xTaskCreate(sensorTelemetryTask, "sensorTelemetry", 3072, NULL, 1, NULL);
 
 ${eventTasks}
 ${statements_do}
@@ -1916,6 +1936,113 @@ if (window.electronAPI.isWeb && !window.electronAPI.supportsCodeUpload) {
     }
   }, 10000);
 }
+
+// --- BẢNG THEO DÕI CẢM BIẾN THỜI GIAN THỰC ---
+const sensorMonitorToggle = document.getElementById('sensor-monitor-toggle');
+const sensorMonitorPanel = document.getElementById('sensor-monitor-panel');
+const sensorMonitorStatus = document.getElementById('sensor-monitor-status');
+let sensorMonitorTimer = null;
+let sensorMonitorStarting = false;
+
+function setSensorValue(id, value, suffix = '') {
+  const element = document.getElementById(id);
+  if (element) element.textContent = value === undefined || value === null ? '--' : `${value}${suffix}`;
+}
+
+function renderSensorData(data) {
+  setSensorValue('sensor-light', data.light);
+  setSensorValue('sensor-ultrasonic', data.ultrasonic, ' cm');
+  setSensorValue('sensor-line1', data.line1);
+  setSensorValue('sensor-line2', data.line2);
+  setSensorValue('sensor-line3', data.line3);
+  setSensorValue('sensor-button1', data.button1);
+  setSensorValue('sensor-button2', data.button2);
+}
+
+async function ensureSensorMonitorStarted(port) {
+  if (sensorMonitorStarting) return;
+  sensorMonitorStarting = true;
+  try {
+    await window.electronAPI.startSensorMonitor(port);
+  } finally {
+    sensorMonitorStarting = false;
+  }
+}
+
+async function refreshSensorMonitor() {
+  if (!sensorMonitorToggle?.checked) return;
+  const port = comPortSelect.value;
+  if (!port) {
+    sensorMonitorStatus.textContent = 'Hãy chọn cổng COM của robot.';
+    return;
+  }
+
+  try {
+    const result = await window.electronAPI.getSensorMonitorData();
+    if (!result.running || result.port !== port) {
+      sensorMonitorStatus.textContent = isUploadInProgress
+        ? 'Đang nạp code, bảng sẽ tự kết nối lại...'
+        : 'Đang mở cổng theo dõi cảm biến...';
+      if (!isUploadInProgress) await ensureSensorMonitorStarted(port);
+      return;
+    }
+
+    if (!result.data) {
+      sensorMonitorStatus.textContent = result.error
+        ? result.error
+        : 'Đã kết nối · hãy nạp lại chương trình để nhận dữ liệu.';
+      return;
+    }
+
+    renderSensorData(result.data);
+    const age = Date.now() - Number(result.data.timestamp || 0);
+    sensorMonitorStatus.textContent = age < 3000
+      ? `Đang cập nhật từ ${port}`
+      : 'Chưa nhận được dữ liệu mới từ robot.';
+  } catch (error) {
+    sensorMonitorStatus.textContent = /404|không tìm thấy chức năng/i.test(error.message)
+      ? 'Cần cài Retoblock Uploader 0.2.0 để theo dõi cảm biến.'
+      : `Không thể đọc cảm biến: ${error.message}`;
+  }
+}
+
+async function setSensorMonitorEnabled(enabled) {
+  sensorMonitorPanel.hidden = !enabled;
+  if (sensorMonitorTimer) {
+    clearInterval(sensorMonitorTimer);
+    sensorMonitorTimer = null;
+  }
+
+  if (!enabled) {
+    try {
+      await window.electronAPI.stopSensorMonitor?.();
+    } catch (_) {
+      // Cầu nối có thể đã đóng; không cần báo lỗi khi người dùng tắt bảng.
+    }
+    return;
+  }
+
+  if (!window.electronAPI.supportsSensorMonitor) {
+    sensorMonitorStatus.textContent = 'Phiên bản này chưa hỗ trợ theo dõi cảm biến.';
+    return;
+  }
+  await refreshSensorMonitor();
+  sensorMonitorTimer = setInterval(refreshSensorMonitor, 500);
+}
+
+sensorMonitorToggle?.addEventListener('change', () => {
+  setSensorMonitorEnabled(sensorMonitorToggle.checked);
+});
+
+comPortSelect?.addEventListener('change', async () => {
+  if (!sensorMonitorToggle?.checked) return;
+  try {
+    await window.electronAPI.stopSensorMonitor?.();
+  } catch (_) {
+    // refreshSensorMonitor sẽ thử mở lại trên cổng mới.
+  }
+  refreshSensorMonitor();
+});
 
 // --- LOGIC DIALOG TẠO KHỐI TỰ ĐỊNH NGHĨA (MBLOCK STYLE) ---
 let previewItems = [];

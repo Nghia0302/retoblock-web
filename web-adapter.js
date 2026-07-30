@@ -219,6 +219,27 @@
     }
   }
 
+  async function startSensorMonitor(port) {
+    const response = await bridgeRequest('/monitor/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ port })
+    });
+    return response.json();
+  }
+
+  async function stopSensorMonitor() {
+    const response = await bridgeRequest('/monitor/stop', { method: 'POST' });
+    return response.json();
+  }
+
+  async function getSensorMonitorData() {
+    const response = await bridgeRequest('/monitor/data', {
+      signal: AbortSignal.timeout(2500)
+    });
+    return response.json();
+  }
+
   async function updateBridgeStatus() {
     const status = document.getElementById('bridge-status');
     if (!status || uploadInProgress) return;
@@ -236,8 +257,12 @@
   window.electronAPI = {
     isWeb: true,
     supportsCodeUpload: true,
+    supportsSensorMonitor: true,
     sendCodeToESP32: uploadThroughBridge,
     getSerialPorts: listBridgePorts,
+    startSensorMonitor,
+    stopSensorMonitor,
+    getSensorMonitorData,
     saveWorkspace: async (xmlText) => {
       localStorage.setItem('retoblock-workspace', xmlText);
       return { success: true };
