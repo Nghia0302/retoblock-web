@@ -179,13 +179,33 @@ Blockly.defineBlocksWithJsonArray([
     "helpUrl": ""
   },
   {
-    "type": "esp32_read_color",
-    "message0": "Đọc cảm biến màu sắc",
-    "output": "String",
-    "colour": 290,
-    "tooltip": "Trả về tên màu sắc nhận diện được (ví dụ: RED, BLUE, GREEN).",
-    "helpUrl": ""
-  },
+      "type": "esp32_read_color",
+      "message0": "Đọc cảm biến màu sắc",
+      "output": "String",
+      "colour": 290,
+      "tooltip": "Trả về tên màu sắc nhận diện được (ví dụ: RED, BLUE, GREEN).",
+      "helpUrl": ""
+    },
+    {
+      "type": "esp32_check_color",
+      "message0": "Cảm biến phát hiện màu %1",
+      "args0": [
+        {
+          "type": "field_dropdown",
+          "name": "COLOR",
+          "options": [
+            ["Đỏ (RED)", "RED"],
+            ["Xanh lá (GREEN)", "GREEN"],
+            ["Xanh dương (BLUE)", "BLUE"],
+            ["Vàng (YELLOW)", "YELLOW"],
+            ["Trắng (WHITE)", "WHITE"]
+          ]
+        }
+      ],
+      "output": "Boolean",
+      "colour": 290,
+      "tooltip": "Kiểm tra xem cảm biến có đang phát hiện màu đã chọn hay không"
+    },
   {
     "type": "esp32_start",
     "message0": "Khởi động Robot %1 Thực hiện %2",
