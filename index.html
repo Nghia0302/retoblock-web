@@ -180,6 +180,14 @@
 
   <div id="blocklyDiv"></div>
 
+  <!-- Device Selector Panel (Floating above toolbox) -->
+  <div id="device-selector" class="device-selector-container">
+    <div class="device-label">Thiết bị</div>
+    <button class="device-btn active" id="btn-dev-retobot">RetoBot</button>
+    <button class="device-btn disabled" id="btn-dev-retobot2" onclick="alert('RetoBot 2.0 sắp ra mắt!')">RetoBot 2.0</button>
+  </div>
+
+
   <section id="sensor-monitor-panel" class="sensor-monitor-panel" hidden aria-live="polite">
     <div class="sensor-monitor-title">Dữ liệu cảm biến thời gian thực</div>
     <div id="sensor-monitor-status" class="sensor-monitor-status">Đang kết nối với robot...</div>
