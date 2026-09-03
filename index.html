@@ -187,7 +187,7 @@
     <button class="device-btn" id="btn-dev-retobot2" onclick="switchDevice('retobot2')">RetoBot 2.0</button>
   </div>
   <script>
-    let retobot2CategoryHTML = '<category name="Mở rộng 2.0" colour="#ff5722" id="cat_retobot2"><block type="esp32_servo"></block><block type="esp32_read_color"></block></category>';
+    let retobot2CategoryHTML = '<category name="Mở rộng 2.0" colour="#ff5722" id="cat_retobot2"><block type="esp32_servo"></block><block type="esp32_read_color"></block><block type="esp32_check_color"></block></category>';
     function switchDevice(device) {
       document.getElementById('btn-dev-retobot').classList.remove('active');
       document.getElementById('btn-dev-retobot2').classList.remove('active');
