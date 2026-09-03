@@ -161,6 +161,32 @@ if (Blockly && Blockly.FieldDropdown) {
 // 1. ĐỊNH NGHĨA HÌNH DÁNG KHỐI BẰNG JSON ĐỂ ĐẢM BẢO CHUẨN XÁC
 Blockly.defineBlocksWithJsonArray([
   {
+    "type": "esp32_servo",
+    "message0": "Nâng hạ cần bằng Servo góc %1 độ",
+    "args0": [
+      {
+        "type": "field_number",
+        "name": "ANGLE",
+        "value": 90,
+        "min": 0,
+        "max": 180
+      }
+    ],
+    "previousStatement": null,
+    "nextStatement": null,
+    "colour": 120,
+    "tooltip": "Điều khiển Servo quay từ 0 đến 180 độ.",
+    "helpUrl": ""
+  },
+  {
+    "type": "esp32_read_color",
+    "message0": "Đọc cảm biến màu sắc",
+    "output": "String",
+    "colour": 290,
+    "tooltip": "Trả về tên màu sắc nhận diện được (ví dụ: RED, BLUE, GREEN).",
+    "helpUrl": ""
+  },
+  {
     "type": "esp32_start",
     "message0": "Khởi động Robot %1 Thực hiện %2",
     "args0": [
