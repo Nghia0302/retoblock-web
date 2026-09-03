@@ -1382,6 +1382,15 @@ Blockly.Blocks['math_change'] = {
 
 // Sinh C++ cho khối tăng/giảm biến. Generator mặc định của Blockly tạo
 // biểu thức JavaScript có `typeof`, khiến PlatformIO không biên dịch được.
+Blockly.JavaScript.forBlock['esp32_servo'] = function(block) {
+  const angle = block.getFieldValue('ANGLE');
+  return '  writeServoAngle(' + angle + ');\n';
+};
+
+Blockly.JavaScript.forBlock['esp32_read_color'] = function(block) {
+  return ['colorSensor.getColorName()', Blockly.JavaScript.ORDER_ATOMIC];
+};
+
 Blockly.JavaScript.forBlock['math_change'] = function (block) {
   const variableId = block.getFieldValue('VAR');
   const varName = variableId

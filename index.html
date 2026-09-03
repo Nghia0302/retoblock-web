@@ -183,9 +183,27 @@
   <!-- Device Selector Panel (Floating above toolbox) -->
   <div id="device-selector" class="device-selector-container">
     <div class="device-label">Thiết bị</div>
-    <button class="device-btn active" id="btn-dev-retobot">RetoBot</button>
-    <button class="device-btn disabled" id="btn-dev-retobot2" onclick="alert('RetoBot 2.0 sắp ra mắt!')">RetoBot 2.0</button>
+    <button class="device-btn active" id="btn-dev-retobot" onclick="switchDevice('retobot')">RetoBot</button>
+    <button class="device-btn" id="btn-dev-retobot2" onclick="switchDevice('retobot2')">RetoBot 2.0</button>
   </div>
+  <script>
+    function switchDevice(device) {
+      document.getElementById('btn-dev-retobot').classList.remove('active');
+      document.getElementById('btn-dev-retobot2').classList.remove('active');
+      document.getElementById('btn-dev-' + device).classList.add('active');
+      
+      const toolbox = document.getElementById('toolbox');
+      const cat2 = document.getElementById('cat_retobot2');
+      if (device === 'retobot2') {
+        cat2.style.display = 'block';
+      } else {
+        cat2.style.display = 'none';
+      }
+      if (typeof workspace !== 'undefined') {
+        workspace.updateToolbox(toolbox);
+      }
+    }
+  </script>
 
 
   <section id="sensor-monitor-panel" class="sensor-monitor-panel" hidden aria-live="polite">
@@ -203,6 +221,10 @@
   </section>
 
   <xml id="toolbox" style="display: none">
+    <category name="Mở rộng 2.0" colour="#ff5722" id="cat_retobot2" style="display: none;">
+      <block type="esp32_servo"></block>
+      <block type="esp32_read_color"></block>
+    </category>
     <category name="Khởi động" colour="#4C97FF">
       <block type="esp32_start"></block>
     </category>
