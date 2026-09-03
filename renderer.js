@@ -996,7 +996,9 @@ void sensorTelemetryTask(void* arg) {
 }
 
 void setup() {
-  Serial.begin(115200);
+    Serial.begin(115200);
+    initServo();
+    initColorSensor();
   
   // Khởi tạo các chân cảm biến
   pinMode(18, OUTPUT); // Siêu âm TRIG
