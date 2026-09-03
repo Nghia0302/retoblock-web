@@ -930,6 +930,10 @@ long readUltrasonic() {
 }
 
   String readColorSensor() {
+    Wire.beginTransmission(0x29);
+    Wire.write(0xB4); // Command bit (0x80) | Auto-increment (0x20) | CDATAL (0x14)
+    Wire.endTransmission();
+    
     Wire.requestFrom(0x29, 8);
     if (Wire.available() == 8) {
       int c = Wire.read() | (Wire.read() << 8);
@@ -937,24 +941,23 @@ long readUltrasonic() {
       int g = Wire.read() | (Wire.read() << 8);
       int b = Wire.read() | (Wire.read() << 8);
 
-      if (r > g * 1.5 && r > b * 1.5) return "RED";
-      if (g > r * 1.5 && g > b * 1.5) return "GREEN";
-      if (b > r * 1.5 && b > g * 1.5) return "BLUE";
-      if (r > 100 && g > 100 && b < 100) return "YELLOW";
-      if (r > 100 && g > 100 && b > 100) return "WHITE";
+      if (r > g * 1.5 && r > b * 1.5 && r > 20) return "RED";
+      if (g > r * 1.3 && g > b * 1.3 && g > 20) return "GREEN";
+      if (b > r * 1.3 && b > g * 1.3 && b > 20) return "BLUE";
+      if (r > 30 && g > 30 && b < r * 0.8 && b < g * 0.8) return "YELLOW";
+      if (c > 100 && r > 30 && g > 30 && b > 30) return "WHITE";
     }
     return "UNKNOWN";
-  }
-
-  void initColorSensor() {
-    Wire.begin(21, 22);
+  }  void initColorSensor() {
+    Wire.begin();
     Wire.beginTransmission(0x29);
-    Wire.write(0x80 | 0x00);
-    Wire.write(0x03);
+    Wire.write(0x80); // ENABLE register
+    Wire.write(0x03); // PON | AEN
     Wire.endTransmission();
-    delay(3);
+    
     Wire.beginTransmission(0x29);
-    Wire.write(0x80 | 0x14);
+    Wire.write(0x81); // ATIME register
+    Wire.write(0xF6); // 24ms (fast enough for robot)
     Wire.endTransmission();
   }
 
